@@ -20,6 +20,7 @@ def init_db():
     try:
         admins = [('felix', 'f123'), ('gezelle', 'g123'), ('james', 'j123')]
         for user, pwd in admins:
+            # Encrypt password before storing in database
             hashed = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             conn.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", 
                          (user, hashed, 'SuperAdmin'))
@@ -27,6 +28,7 @@ def init_db():
     except: pass # Prevents crash if users already exist
     conn.close()
 
+# Runs only when file is executed directly
 if __name__ == "__main__":
     init_db()
     print("Tier 3 Initialized: SQLite Database Created.")
