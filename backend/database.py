@@ -3,32 +3,44 @@ import bcrypt
 
 DB_NAME = "diona_system.db"
 
-def init_db():
+def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
-    # 1. Admin Users Table (ILO 3: Security)
-    conn.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  username TEXT UNIQUE, password_hash TEXT, role TEXT)''')
-    
-    # 2. Alerts Table (Tier 3 Persistence)
-    conn.execute('''CREATE TABLE IF NOT EXISTS alerts 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  attack_type TEXT, attacker_ip TEXT, severity TEXT, 
-                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-    
-    # 3. Seed Mock Admins (Evidence for Material 3)
+    conn.row_factory = sqlite3.Row 
+    return conn
+
+def init_db():
+    conn = get_db_connection()
+    # Create Tables
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT DEFAULT 'Admin'
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            attack_type TEXT NOT NULL,
+            attacker_ip TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Seed Users
     try:
         admins = [('felix', 'f123'), ('gezelle', 'g123'), ('james', 'j123')]
         for user, pwd in admins:
-            # Encrypt password before storing in database
             hashed = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            conn.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", 
-                         (user, hashed, 'SuperAdmin'))
+            conn.execute('INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)', (user, hashed))
         conn.commit()
-    except: pass # Prevents crash if users already exist
+    except Exception as e:
+        print(f"Seeding error: {e}")
+    
     conn.close()
 
-# Runs only when file is executed directly
 if __name__ == "__main__":
     init_db()
-    print("Tier 3 Initialized: SQLite Database Created.")
+    print("✅ Database Tier Initialized.")
